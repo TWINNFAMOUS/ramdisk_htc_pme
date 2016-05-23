@@ -92,6 +92,10 @@ on post-fs-data
 
     # Create directory for fingerprint
     mkdir /data/fpc 0770 system system
+    mkdir /data/misc/stargate 0770 system system
+    mkdir /data/misc/stargate/bg_estimation 0770 system system
+    mkdir /data/misc/stargate/calib_test 0770 system system
+    mkdir /data/misc/stargate/database 0770 system system
 
     # Create directory for hostapd
     mkdir /data/hostapd 0770 system wifi
@@ -136,6 +140,14 @@ on post-fs-data
 
     # Create directory for TZ Apps
     mkdir /data/misc/qsee 0770 system system
+
+    # File flags for prebuilt ril db file
+    write /data/misc/radio/prebuilt_db_support 1
+    chown radio radio /data/misc/radio/prebuilt_db_support
+    chmod 0400 /data/misc/radio/prebuilt_db_support
+    write /data/misc/radio/db_check_done 0
+    chown radio radio /data/misc/radio/db_check_done
+    chmod 0660 /data/misc/radio/db_check_done
 
     setprop vold.post_fs_data_done 1
 
