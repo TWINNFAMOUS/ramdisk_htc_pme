@@ -346,6 +346,10 @@ service cnd /system/bin/cnd
     class late_start
     socket cnd stream 660 root inet
 
+service dpmd /system/bin/dpmd
+    class late_start
+    socket dpmd stream 660 root system
+
 service fingerprintd /system/bin/fingerprintd
     class late_start
     user system
@@ -422,6 +426,11 @@ service per_proxy /system/bin/pm-proxy
     user system
     group system
     disabled
+
+service qcomsysd /system/bin/qcom-system-daemon
+    class main
+    user root
+    group root qcom_diag
 
 on property:init.svc.per_mgr=running
     start per_proxy
@@ -582,6 +591,12 @@ service hostapd /system/bin/hostapd -dd /data/hostapd/hostapd.conf
     user root
     group root
     oneshot
+    disabled
+
+service sensors /system/bin/sensors.qcom
+    class core
+    user root
+    group root
     disabled
 
 service sensor-sh /system/bin/sh /init.qcom.sensors.sh
