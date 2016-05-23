@@ -154,7 +154,7 @@ on post-fs-data
 on early-boot
     chown root audio /sys/kernel/boot_adsp/boot
     write /sys/kernel/boot_adsp/boot 1
-    write /sys/kernel/boot_slpi/boot 1
+    exec /system/bin/sh /init.htc.slpi.sh
 
 on boot
     # Create QMUX deamon socket area
@@ -326,8 +326,6 @@ on boot
     # Set vibrator intensity permissions
     chown system system /sys/devices/virtual/timed_output/vibrator/voltage_level
     chmod 0644 /sys/devices/virtual/timed_output/vibrator/voltage_level
-
-    write /sys/devices/soc/soc:fp_fpc1155/pinctl_set fpc1020_reset_active
 
 # Services begin here
 
