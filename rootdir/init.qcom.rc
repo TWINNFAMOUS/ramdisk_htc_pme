@@ -592,6 +592,11 @@ service hostapd /system/bin/hostapd -dd /data/hostapd/hostapd.conf
     oneshot
     disabled
 
+service sensor-sh /system/bin/sh /init.qcom.sensors.sh
+    class core
+    user root
+    oneshot
+
 # Triggers start here
 on class_start:late_start
     # For modem config copy
