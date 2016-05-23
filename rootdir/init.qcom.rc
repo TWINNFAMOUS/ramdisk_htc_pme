@@ -584,6 +584,12 @@ service hostapd /system/bin/hostapd -dd /data/hostapd/hostapd.conf
     oneshot
     disabled
 
+service sensors /system/bin/sensors.qcom
+    class core
+    user root
+    group root
+    disabled
+
 service sensor-sh /system/bin/sh /init.qcom.sensors.sh
     class core
     user root
