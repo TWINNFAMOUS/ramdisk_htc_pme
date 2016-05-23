@@ -28,31 +28,118 @@
 #import init.qcom.usb.rc
 import init.target.rc
 import init.qcom.factory.rc
+import init.qcom.power.rc
 
 on early-init
-    mount debugfs debugfs /sys/kernel/debug
-    chmod 0755 /sys/kernel/debug
+    symlink /data/tombstones /tombstones
+
+    mkdir /dsp 0771 media media
+    mkdir /firmware 0771 system system
+    mkdir /firmware/adsp 0771 system system
+    mkdir /firmware/radio 0771 system system
+    mkdir /firmware/slpi 0771 system system
+    mkdir /firmware/venus 0771 system system
+    mkdir /firmware/wsd 0500 rfs rfs
 
 on init
     # Set permissions for persist partition
     mkdir /persist 0771 system system
 
     # Support legacy paths
-    symlink /sdcard /mnt/sdcard
+    symlink /sdcard /mnt/sdcard0
     symlink /sdcard /storage/sdcard0
-    symlink /storage/ext_sd /sdcard2
+
+    # From init.target.rc
+    write /sys/module/qpnp_rtc/parameters/poweron_alarm 1
+
+# msm specific files that need to be created on /data
+on post-fs-data
+    # Create directory for tombstone
+    mkdir /data/tombstones 0771 system system
+    mkdir /tombstones/modem 0771 system system
+    mkdir /tombstones/lpass 0771 system system
+    mkdir /tombstones/dsps 0771 system system
+
+    mkdir /persist/data/sfs 0700 system system
+    mkdir /persist/data/tz 0700 system system
+    mkdir /persist/tee 0700 system system
+
+    # Create directory for audio
+    mkdir /data/data/media 0770 media media
+    mkdir /data/misc/audio 0770 audio audio
+    mkdir /data/misc/dts 0770 media audio
+
+    # Create directory for camera
+    mkdir /data/camera 0770 media camera
+    mkdir /data/misc/camera 0770 camera camera
+
+    # Create directory for CNE
+    mkdir /data/connectivity 0771 system system
+
+    # Create directory for DASH client
+    mkdir /data/misc/dash 0770 media audio
+
+    # Create directory for display
+    mkdir /data/misc/display 0770 system graphics
+    mkdir /persist/display 0770 system graphics
+
+    # Create directory for DPM
+    mkdir /data/dpm 0771 system system
+    mkdir /data/dpm/nsrm 0771 system system
+
+    # Create directory for fingerprint
+    mkdir /data/fpc 0770 system system
+
+    # Create directory for hostapd
+    mkdir /data/hostapd 0770 system wifi
+
+    # Create directory for IMS services
+    mkdir /data/shared 0755 system system
+
+    # Create directory for IPA
+    mkdir /data/misc/ipa 0700 net_admin net_admin
+
+    # Create directory for location services
+    mkdir /data/misc/location 0770 gps gps
+    mkdir /data/misc/location/gpsone_d 0770 system gps
+    mkdir /data/misc/location/gsiff 0770 gps gps
+    mkdir /data/misc/location/mq 0770 gps gps
+    mkdir /data/misc/location/quipc 0770 gps system
+    mkdir /data/misc/location/xtwifi 0770 gps gps
+
+    # Create directory for MobiCore
+    mkdir /data/app/mcRegistry 0775 system system
+    symlink /persist/tee/00000000.authtokcont.backup /data/app/mcRegistry/00000000.authtokcont.backup
+    export MC_AUTH_TOKEN_PATH /data/app/mcRegistry
+
+    # Create directory for modem config
+    mkdir /data/misc/radio/modem_config 0770 radio radio
+
+    # Mark the copy complete flag to not completed
+    write /data/misc/radio/copy_complete 0
+    chown radio radio /data/misc/radio/copy_complete
+    chmod 0660 /data/misc/radio/copy_complete
+
+    # Create directory for NFC
+    mkdir /data/nfc 0770 nfc nfc
+    mkdir /data/nfc/param 0770 nfc nfc
+
+    # Create directory for perfd
+    mkdir /data/misc/perfd 2755 root system
+    mkdir /data/system/perfd 2770 root system
+
+    # Create directory for time-services
+    mkdir /data/time/ 0700 system system
+
+    # Create directory for TZ Apps
+    mkdir /data/misc/qsee 0770 system system
+
+    setprop vold.post_fs_data_done 1
 
 on early-boot
-    # set RLIMIT_MEMLOCK to 64MB
-    setrlimit 8 67108864 67108864
-    # Allow subsystem (modem etc) debugging
-    write /sys/module/subsystem_restart/parameters/enable_debug ${persist.sys.ssr.enable_debug}
-    write /sys/module/pil_msa/parameters/pbl_mba_boot_timeout_ms ${persist.sys.mba_boot_timeout}
-    write /sys/module/pil_msa/parameters/modem_auth_timeout_ms ${persist.sys.modem_auth_timeout}
-    write /sys/module/peripheral_loader/parameters/proxy_timeout_ms ${persist.sys.pil_proxy_timeout}
+    chown root audio /sys/kernel/boot_adsp/boot
     write /sys/kernel/boot_adsp/boot 1
-    exec /system/bin/sh /init.htc.slpi.sh
-    exec u:r:qti_init_shell:s0 -- /init.qcom.early_boot.sh
+    write /sys/kernel/boot_slpi/boot 1
 
 on boot
     # Create QMUX deamon socket area
@@ -238,90 +325,6 @@ on boot
 
     write /sys/devices/soc/soc:fp_fpc1155/pinctl_set fpc1020_reset_active
 
-
-# msm specific files that need to be created on /data
-on post-fs-data
-    # Create directory for tombstone
-    mkdir /data/tombstones 0771 system system
-    mkdir /tombstones/modem 0771 system system
-    mkdir /tombstones/lpass 0771 system system
-    mkdir /tombstones/dsps 0771 system system
-
-    mkdir /persist/data/sfs 0700 system system
-    mkdir /persist/data/tz 0700 system system
-    mkdir /persist/tee 0700 system system
-
-    # Create directory for audio
-    mkdir /data/data/media 0770 media media
-    mkdir /data/misc/audio 0770 audio audio
-    mkdir /data/misc/dts 0770 media audio
-
-    # Create directory for camera
-    mkdir /data/camera 0770 media camera
-    mkdir /data/misc/camera 0770 camera camera
-
-    # Create directory for CNE
-    mkdir /data/connectivity 0771 system system
-
-    # Create directory for DASH client
-    mkdir /data/misc/dash 0770 media audio
-
-    # Create directory for display
-    mkdir /data/misc/display 0770 system graphics
-    mkdir /persist/display 0770 system graphics
-
-    # Create directory for DPM
-    mkdir /data/dpm 0771 system system
-    mkdir /data/dpm/nsrm 0771 system system
-
-    # Create directory for fingerprint
-    mkdir /data/fpc 0770 system system
-
-    # Create directory for hostapd
-    mkdir /data/hostapd 0770 system wifi
-
-    # Create directory for IMS services
-    mkdir /data/shared 0755 system system
-
-    # Create directory for IPA
-    mkdir /data/misc/ipa 0700 net_admin net_admin
-
-    # Create directory for location services
-    mkdir /data/misc/location 0770 gps gps
-    mkdir /data/misc/location/gpsone_d 0770 system gps
-    mkdir /data/misc/location/gsiff 0770 gps gps
-    mkdir /data/misc/location/mq 0770 gps gps
-    mkdir /data/misc/location/quipc 0770 gps system
-    mkdir /data/misc/location/xtwifi 0770 gps gps
-
-    # Create directory for MobiCore
-    mkdir /data/app/mcRegistry 0775 system system
-    symlink /persist/tee/00000000.authtokcont.backup /data/app/mcRegistry/00000000.authtokcont.backup
-    export MC_AUTH_TOKEN_PATH /data/app/mcRegistry
-
-    # Create directory for modem config
-    mkdir /data/misc/radio/modem_config 0770 radio radio
-
-    # Mark the copy complete flag to not completed
-    write /data/misc/radio/copy_complete 0
-    chown radio radio /data/misc/radio/copy_complete
-    chmod 0660 /data/misc/radio/copy_complete
-
-    # Create directory for NFC
-    mkdir /data/nfc 0770 nfc nfc
-    mkdir /data/nfc/param 0770 nfc nfc
-
-    # Create directory for perfd
-    mkdir /data/misc/perfd 2755 root system
-    mkdir /data/system/perfd 2770 root system
-
-    # Create directory for time-services
-    mkdir /data/time/ 0700 system system
-
-    # Create directory for TZ Apps
-    mkdir /data/misc/qsee 0770 system system
-
-    setprop vold.post_fs_data_done 1
 
 service iop /system/bin/iop
     class main
