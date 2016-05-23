@@ -2,7 +2,6 @@ import init.qcom.rc
 import init.htc.common.rc
 import init.htc.storage.rc
 import init.htc.storage.exfat.rc
-import init.htc_pme.fp.rc
 import init.htc_pme.sku.rc
 
 #++ Modem BSP
