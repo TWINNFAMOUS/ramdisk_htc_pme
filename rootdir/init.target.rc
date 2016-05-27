@@ -27,14 +27,6 @@
 #
 #
 
-on early-init
-    mkdir /firmware 0771 system system
-    # [HTC_BT] ++
-    # mkdir /bt_firmware 0771 system system
-    # [HTC_BT] --
-    symlink /data/tombstones /tombstones
-    mkdir /dsp 0771 media media
-
 on post-fs
     export LD_PRELOAD libNimsWrap.so
 
@@ -87,11 +79,6 @@ on fs
     wait /dev/block/bootdevice/by-name/apppreload
     e2fsck emmc@apppreload
     mount ext4 /dev/block/bootdevice/by-name/apppreload /preload nosuid nodev noatime barrier=1,grpid
-
-    # Load Mocana FIPS module. Add here since it can make sure system is mounted
-    insmod /system/lib/modules/moc_platform_mod.ko.3.18
-    insmod /system/lib/modules/moc_crypto.ko.3.18
-    insmod /system/lib/modules/moc_crypto_api_tmpl.ko.3.18
 
 # Mount Venus fw ++
     mkdir /firmware/image 0771 system system
