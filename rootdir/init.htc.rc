@@ -1,0 +1,126 @@
+on post-fs
+    export LD_PRELOAD libNimsWrap.so
+
+on fs
+    wait /dev/block/bootdevice
+    wait /dev/device-mapper
+    mount_all fstab.qcom
+    swapon_all /etc/fstab.swap
+
+    # Keeping following partitions outside fstab file. As user may not have
+    # these partition flashed on the device. Failure to mount any partition in fstab file
+    # results in failure to launch late-start class.
+
+    wait /dev/block/bootdevice/by-name/cache
+    mount ext4 /dev/block/bootdevice/by-name/cache /cache nosuid nodev barrier=1
+
+    wait /dev/block/bootdevice/by-name/persist
+    mount ext4 /dev/block/bootdevice/by-name/persist /persist nosuid nodev barrier=1,errors=panic
+    restorecon_recursive_force /persist
+    mkdir /persist/data 0700 system system
+
+    wait /dev/block/bootdevice/by-name/dsp
+    mount ext4 /dev/block/bootdevice/by-name/dsp /dsp nosuid nodev barrier=1,errors=panic
+    restorecon_recursive /dsp
+
+    # Mount slpi image
+    mkdir /firmware/slpi 0771 system system
+    wait /dev/block/bootdevice/by-name/slpi
+    mount vfat /dev/block/bootdevice/by-name/slpi /firmware/slpi ro shortname=lower,uid=1000,gid=1000,dmask=227,fmask=337
+
+    #RIL+
+    #mount rfg_3
+    wait /dev/block/bootdevice/by-name/rfg_3
+    mount vfat /dev/block/bootdevice/by-name/rfg_3 /firmware/wsd ro shortname=lower,uid=3012,gid=3012,dmask=277,fmask=377
+    #RIL-
+
+    # Mount radio image
+    wait /dev/block/bootdevice/by-name/radio
+    mount vfat /dev/block/bootdevice/by-name/radio /firmware/radio ro shortname=lower,uid=1000,gid=1000,dmask=227,fmask=337
+
+    # Mount adsp image
+    wait /dev/block/bootdevice/by-name/adsp
+    mount vfat /dev/block/bootdevice/by-name/adsp /firmware/adsp ro shortname=lower,uid=1000,gid=1000,dmask=227,fmask=337
+
+    wait /system/bin/sh
+    class_start firmware-link
+    wait /firmware/image/.adsp_done
+    wait /firmware/image/.radio_done
+    wait /firmware/image/.sec_done
+    setprop ro.boot.firmware.cpe 1
+
+# Mount Venus fw ++
+    wait /dev/block/bootdevice/by-name/venus
+    mount vfat /dev/block/bootdevice/by-name/venus /firmware/venus ro shortname=lower,uid=1000,gid=1000,dmask=227,fmask=337
+
+    wait /system/bin/sh
+    class_start firmware-venus-link
+    wait /firmware/image/.venus_done
+#Venus FW end
+
+service fwnk-adsp  /system/bin/sh /init.qcom.firmware_links.sh /firmware/adsp /firmware/image "adsp*" adsp
+    class firmware-link
+    oneshot
+
+#HTC_AUD_START
+service fwnk-cpe  /system/bin/sh /init.qcom.firmware_links.sh /firmware/adsp /firmware/image "cpe*" cpe
+    class firmware-link
+    oneshot
+#HTC_AUD_END
+
+service fwnk-radio /system/bin/sh /init.qcom.firmware_links.sh /firmware/radio /firmware/image "modem* mba* radiover* version* qdsp6m* msadp*" radio
+    class firmware-link
+    oneshot
+
+service fwnk-sec  /system/bin/sh /init.qcom.firmware_links.sh /system/etc/firmware /firmware/image "keymaste* gpta*" sec
+    class firmware-link
+    oneshot
+
+#Mount Venus FW
+service fwnk-venus /system/bin/sh /init.qcom.firmware_links.sh /firmware/venus /firmware/image "venus*" venus
+    class firmware-venus-link
+    oneshot
+#Venus FW end
+
+on init
+# init PnPMgr node
+    chmod 0664 /sys/power/pnpmgr/apps/media_mode
+    chown media system /sys/power/pnpmgr/apps/media_mode
+    chown system /sys/power/pnpmgr/apps/activity_trigger
+    chown system /sys/power/pnpmgr/apps/non_activity_trigger
+    chown system /sys/power/pnpmgr/launch_event
+    chown system /sys/power/powersave
+    chown system /sys/power/pnpmgr/cluster/big/user_perf_lvl
+    chown system /sys/power/pnpmgr/cluster/big/user_lvl_to_min_freq
+    chown system /sys/power/pnpmgr/cluster/big/hotplug/user_cpunum_max
+    chown system /sys/power/pnpmgr/cluster/big/hotplug/user_cpunum_min
+    chown system /sys/power/pnpmgr/cluster/little/user_perf_lvl
+    chown system /sys/power/pnpmgr/cluster/little/user_lvl_to_min_freq
+    chown system /sys/power/pnpmgr/cluster/little/hotplug/user_cpunum_max
+    chown system /sys/power/pnpmgr/cluster/little/hotplug/user_cpunum_min
+    chown system /sys/power/pnpmgr/touch_boost
+    chown system /sys/power/pnpmgr/long_duration_touch_boost
+    chown system /sys/power/wait_for_fb_status
+    chmod 0664 /sys/power/pnpmgr/display/single_layer_yuv
+    chown system /sys/power/pnpmgr/display/single_layer_yuv
+    chmod 0664 /sys/power/pnpmgr/display/single_layer_rgb
+    chown system /sys/power/pnpmgr/display/single_layer_rgb
+    chmod 0664 /sys/power/pnpmgr/display/virtual_display
+    chown system /sys/power/pnpmgr/display/virtual_display
+    chmod 0664 /sys/power/pnpmgr/apps/call_sync
+    chown system /sys/power/pnpmgr/apps/call_sync
+
+    write /sys/power/pnpmgr/cluster/big/hotplug/mp_cpunum_max 4
+    write /sys/power/pnpmgr/cluster/big/hotplug/mp_cpunum_min 1
+    write /sys/power/pnpmgr/cluster/little/hotplug/mp_cpunum_max 4
+    write /sys/power/pnpmgr/cluster/little/hotplug/mp_cpunum_min 0
+    write /sys/power/pnpmgr/thermal/cpu_asn 0
+    write /sys/power/pnpmgr/apps/activity_trigger "booting"
+    write /sys/power/pnpmgr/long_duration_touch_boost_duration 3000
+    write /sys/power/pnpmgr/touch_boost_duration 200
+
+#CPUSET
+    write /dev/cpuset/cpu_exclusive 0
+    write /dev/cpuset/background/cpus "0"
+    write /dev/cpuset/system-background/cpus "0-3"
+    write /dev/cpuset/foreground/cpus "0-3"
