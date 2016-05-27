@@ -91,10 +91,6 @@ on fs
     wait /firmware/image/.venus_done
 #Venus FW end
 
-on boot
-    start rmt_storage
-    start rfs_access
-
 #Mount Venus FW
 service fwnk-venus /system/bin/sh /init.qcom.firmware_links.sh /firmware/venus /firmware/image "venus*" venus
     class firmware-venus-link
