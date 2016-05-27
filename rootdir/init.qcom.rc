@@ -28,8 +28,6 @@
 import init.qcom.power.rc
 import init.qcom.usb.rc
 import init.htc.rc
-import init.target.rc
-import init.htc.common.rc
 
 on early-init
     symlink /data/tombstones /tombstones

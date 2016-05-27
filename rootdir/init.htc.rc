@@ -1,32 +1,3 @@
-# Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are
-# met:
-#     * Redistributions of source code must retain the above copyright
-#       notice, this list of conditions and the following disclaimer.
-#     * Redistributions in binary form must reproduce the above
-#       copyright notice, this list of conditions and the following
-#       disclaimer in the documentation and/or other materials provided
-#       with the distribution.
-#     * Neither the name of The Linux Foundation nor the names of its
-#       contributors may be used to endorse or promote products derived
-#       from this software without specific prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED
-# WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT
-# ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS
-# BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-# BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-# IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#
-#
-
 on post-fs
     export LD_PRELOAD libNimsWrap.so
 
@@ -36,53 +7,76 @@ on fs
     mount_all fstab.qcom
     swapon_all /etc/fstab.swap
 
-    # Update dm-verity state and set partition.*.verified properties
-    verity_update_state
-
     # Keeping following partitions outside fstab file. As user may not have
     # these partition flashed on the device. Failure to mount any partition in fstab file
     # results in failure to launch late-start class.
 
     wait /dev/block/bootdevice/by-name/cache
-    e2fsck emmc@cache
     mount ext4 /dev/block/bootdevice/by-name/cache /cache nosuid nodev barrier=1
 
     wait /dev/block/bootdevice/by-name/persist
-    e2fsck emmc@persist
     mount ext4 /dev/block/bootdevice/by-name/persist /persist nosuid nodev barrier=1,errors=panic
     restorecon_recursive_force /persist
     mkdir /persist/data 0700 system system
 
     wait /dev/block/bootdevice/by-name/dsp
-    e2fsck emmc@dsp
     mount ext4 /dev/block/bootdevice/by-name/dsp /dsp nosuid nodev barrier=1,errors=panic
     restorecon_recursive /dsp
 
     mkdir /devlog 0700 root root
     wait /dev/block/bootdevice/by-name/devlog
-    e2fsck emmc@devlog
     mount ext4 emmc@devlog /devlog nosuid nodev barrier=1,errors=continue
 
     mkdir /fataldevlog 0700 root root
     wait /dev/block/bootdevice/by-name/fataldevlog
-    e2fsck emmc@fataldevlog
     mount ext4 emmc@fataldevlog /fataldevlog nosuid nodev barrier=1,errors=continue
 
     # mount cota partition
     mkdir /cota 0771 root cw_access
     wait /dev/block/bootdevice/by-name/cota
-    e2fsck emmc@cota
     mount ext4 /dev/block/bootdevice/by-name/cota /cota nosuid nodev noatime barrier=1,grpid
 
     # mount preload data partition
     mkdir /preload 0771 system system
     wait /dev/block/bootdevice/by-name/apppreload
-    e2fsck emmc@apppreload
     mount ext4 /dev/block/bootdevice/by-name/apppreload /preload nosuid nodev noatime barrier=1,grpid
 
+    # Mount slpi image
+    mkdir /firmware/slpi 0771 system system
+    wait /dev/block/bootdevice/by-name/slpi
+    mount vfat /dev/block/bootdevice/by-name/slpi /firmware/slpi ro shortname=lower,uid=1000,gid=1000,dmask=227,fmask=337
+
+    #RIL+
+    #mount rfg_3
+    wait /dev/block/bootdevice/by-name/rfg_3
+    mount vfat /dev/block/bootdevice/by-name/rfg_3 /firmware/wsd ro shortname=lower,uid=3012,gid=3012,dmask=277,fmask=377
+    #RIL-
+
+    # Mount radio image
+    wait /dev/block/bootdevice/by-name/radio
+    mount vfat /dev/block/bootdevice/by-name/radio /firmware/radio ro shortname=lower,uid=1000,gid=1000,dmask=227,fmask=337
+
+    # Mount adsp image
+    wait /dev/block/bootdevice/by-name/adsp
+    mount vfat /dev/block/bootdevice/by-name/adsp /firmware/adsp ro shortname=lower,uid=1000,gid=1000,dmask=227,fmask=337
+
+    # Mount carrier partition
+    mkdir /carrier 0770 system carrier
+    wait /dev/block/bootdevice/by-name/carrier
+    mount ext4 /dev/block/bootdevice/by-name/carrier /carrier nosuid nodev noatime barrier=1,grpid
+    chown system carrier /carrier
+    chmod 0770 /carrier
+    # restorecon carrier partition.
+    restorecon_recursive /carrier
+
+    wait /system/bin/sh
+    class_start firmware-link
+    wait /firmware/image/.adsp_done
+    wait /firmware/image/.radio_done
+    wait /firmware/image/.sec_done
+    setprop ro.boot.firmware.cpe 1
+
 # Mount Venus fw ++
-    mkdir /firmware/image 0771 system system
-    mkdir /firmware/venus 0771 system system
     wait /dev/block/bootdevice/by-name/venus
     mount vfat /dev/block/bootdevice/by-name/venus /firmware/venus ro shortname=lower,uid=1000,gid=1000,dmask=227,fmask=337
 
@@ -90,6 +84,24 @@ on fs
     class_start firmware-venus-link
     wait /firmware/image/.venus_done
 #Venus FW end
+
+service fwnk-adsp  /system/bin/sh /init.qcom.firmware_links.sh /firmware/adsp /firmware/image "adsp*" adsp
+    class firmware-link
+    oneshot
+
+#HTC_AUD_START
+service fwnk-cpe  /system/bin/sh /init.qcom.firmware_links.sh /firmware/adsp /firmware/image "cpe*" cpe
+    class firmware-link
+    oneshot
+#HTC_AUD_END
+
+service fwnk-radio /system/bin/sh /init.qcom.firmware_links.sh /firmware/radio /firmware/image "modem* mba* radiover* version* qdsp6m* msadp*" radio
+    class firmware-link
+    oneshot
+
+service fwnk-sec  /system/bin/sh /init.qcom.firmware_links.sh /system/etc/firmware /firmware/image "keymaste* gpta*" sec
+    class firmware-link
+    oneshot
 
 #Mount Venus FW
 service fwnk-venus /system/bin/sh /init.qcom.firmware_links.sh /firmware/venus /firmware/image "venus*" venus
