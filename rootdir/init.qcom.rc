@@ -599,6 +599,10 @@ service qcom-sh /system/bin/sh /init.qcom.sh
     user root
     oneshot
 
+service tftp_server /system/bin/tftp_server
+   class main
+   user root
+
 # Triggers start here
 on class_start:late_start
     # For modem config copy
