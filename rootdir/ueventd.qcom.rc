@@ -172,6 +172,7 @@
 /dev/i2c-5                0660   media       media
 /dev/voice_svc            0660   system     audio
 /dev/avtimer              0660   system     audio
+/dev/tfa9888              0660   media      audio
 
 # DVB devices
 /dev/dvb/adapter0/demux*  0440   media       media
