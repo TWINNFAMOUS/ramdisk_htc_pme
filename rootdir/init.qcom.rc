@@ -594,6 +594,11 @@ service hostapd /system/bin/hostapd -dd /data/hostapd/hostapd.conf
     oneshot
     disabled
 
+service qcom-sh /system/bin/sh /init.qcom.sh
+    class late_start
+    user root
+    oneshot
+
 # Triggers start here
 on class_start:late_start
     # For modem config copy
