@@ -1,6 +1,3 @@
-on post-fs
-    export LD_PRELOAD libNimsWrap.so
-
 on fs
     wait /dev/block/bootdevice
     wait /dev/device-mapper
