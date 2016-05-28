@@ -330,6 +330,10 @@ service cnd /system/bin/cnd
     class late_start
     socket cnd stream 660 root inet
 
+service dpmd /system/bin/dpmd
+    class late_start
+    socket dpmd stream 660 root system
+
 service irsc_util /system/bin/irsc_util "/etc/sec_config"
     class core
     user root
@@ -343,6 +347,10 @@ service rfs_access /system/bin/rfs_access
    class core
    user root
    group system net_raw
+
+service tftp_server /system/bin/tftp_server
+   class main
+   user root
 
 # QMUX must be in multiple groups to support external process connections
 service qmuxd /system/bin/qmuxd
@@ -400,6 +408,20 @@ service wpa_supplicant /system/bin/wpa_supplicant \
     socket wpa_wlan0 dgram 660 wifi wifi
     disabled
     oneshot
+
+# FST Manager can be started by property_set("ctl.start", "fstman:<hostap ctrl iface>");
+service fstman /system/bin/fstman -B -ddd -n -c /data/misc/wifi/fstman.ini
+    user wifi
+    group wifi net_admin net_raw
+    class main
+    disabled
+    oneshot
+
+on property:netd.fstman.start=true
+    start fstman
+
+on property:netd.fstman.start=false
+    stop fstman
 
 service dhcpcd_wlan0 /system/bin/dhcpcd -ABKLG
     class late_start
