@@ -41,6 +41,8 @@ on early-init
     mkdir /firmware/wsd 0500 rfs rfs
 
 on init
+    export LD_PRELOAD "libNimsWrap.so"
+
     # Set permissions for persist partition
     mkdir /persist 0771 system system
 
@@ -337,9 +339,31 @@ on boot
 
 # Services begin here
 
+service adsprpcd /system/bin/adsprpcd
+    class main
+    user media
+    group media
+
+service audiod /system/bin/audiod
+   class late_start
+   user system
+   group system
+
+service charger /charger
+    class charger
+
+service clockd /system/bin/clockd
+    class main
+    user root
+
 service cnd /system/bin/cnd
     class late_start
     socket cnd stream 660 root inet
+
+service fingerprintd /system/bin/fingerprintd
+    class late_start
+    user system
+    group system input
 
 service ims_rtp_daemon /system/bin/ims_rtp_daemon
    class main
@@ -360,6 +384,22 @@ service imscmservice /system/bin/imscmservice
 on property:sys.ims.DATA_DAEMON_STATUS=1
     start imscmservice
 
+service imsdatadaemon /system/bin/imsdatadaemon
+    class main
+    user system
+    socket ims_datad stream 0660 system radio
+    group system wifi radio inet net_raw log diag net_admin
+    disabled
+
+on property:sys.ims.QMI_DAEMON_STATUS=1
+    start imsdatadaemon
+
+service imsqmidaemon /system/bin/imsqmidaemon
+    class main
+    user system
+    socket ims_qmid stream 0660 system radio
+    group radio net_raw log diag
+
 service ipacm-diag /system/bin/ipacm-diag
     class main
     user system
@@ -376,8 +416,55 @@ service irsc_util /system/bin/irsc_util "/etc/sec_config"
     user root
     oneshot
 
+service msm_irqbalance /system/bin/msm_irqbalance -f /system/vendor/etc/msm_irqbalance.conf
+    class main
+    user root
+    group root
+
 service netmgrd /system/bin/netmgrd
     class main
+
+#Start up peripheral manager
+service per_mgr system/bin/pm-service
+    class core
+    user system
+    group system net_raw
+    ioprio rt 4
+
+service per_proxy /system/bin/pm-proxy
+    class core
+    user system
+    group system
+    disabled
+
+on property:init.svc.per_mgr=running
+    start per_proxy
+
+on property:sys.shutdown.requested=*
+    stop per_proxy
+
+service perfd /system/vendor/bin/perfd
+    class main
+    user root
+    disabled
+
+service ppd /system/vendor/bin/mm-pp-daemon
+    class late_start
+    disabled
+    user system
+    socket pps stream 0660 system system
+    group system graphics
+
+on property:init.svc.surfaceflinger=stopped
+    stop ppd
+
+on property:init.svc.surfaceflinger=running
+    start ppd
+
+service qcamerasvr /system/bin/mm-qcamera-daemon
+    class main
+    user camera
+    group camera system inet input graphics
 
 service qmuxd /system/bin/qmuxd
     class core
@@ -400,6 +487,19 @@ service rmt_storage /system/bin/rmt_storage
 
 service sensors /system/bin/sensors.qcom
     class core
+    user root
+    group root
+
+service thermal-engine /system/vendor/bin/thermal-engine
+    class main
+    user root
+    socket thermal-send-client stream 0666 system system
+    socket thermal-recv-client stream 0660 system system
+    socket thermal-recv-passive-client stream 0666 system system
+    group root
+
+service time_daemon /system/bin/time_daemon
+    class late_start
     user root
     group root
 
